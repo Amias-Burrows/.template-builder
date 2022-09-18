@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 	# Colour Variables
 
@@ -17,15 +16,17 @@ ROOT=$(pwd)
 REC_SEP="\u001E"
 GRP_SEP="\u001D"
 TXT_SRT="\u0002"
+#set -x
 
-print_temp_names() {
-	TEMPS=""
-	while IFS= read -r LINE
+get_temp_names() {
+	TEMPS=()
+	while IFS= read -r LINE		# Runs through the file contents and prints out template names
 	do
-		TEMPS="${LINE##*}"
-		printf "\n${TEMPS}\n"
+
+		TEMPS+=(${LINE%%\\u001D*})
+		
 	done < ${TEMP_LOC}
-	return TEMPS
+	echo "${TEMPS[@]}"
 }
 
 
@@ -33,8 +34,9 @@ add() {		# Adds file to template directory
 	printf "\nAdd function\n"
 
 	FILE_COUNT=$(ls ${FILE_LOC} | wc -l)
+	EXT=${2##*.}
 
-	cp ./${2} ${FILE_LOC}${FILE_COUNT}
+	cp ./${2} ${FILE_LOC}${FILE_COUNT}.${EXT}
 
 	mv ./${2} ./${FILE_COUNT}${2}
 
@@ -192,15 +194,32 @@ case $1 in
 
 		if [[ "${2}" != "" ]] && [ -f $TEMP_LOC ]
 		then
-			print_temp_names
+			LIST=$(get_temp_names)
+			for ENTRY in $LIST
+			do
+				if [ $2 == $ENTRY ]
+				then
+					# This is where we note down the number.  Can't be bothered to think of the varibale name so I'm gonna go get riggedy riggedy recked with Fern
+				fi
+			done
 		else
 			printf "Error"
 		fi
 
 		;;
 
-	--list|-l)
-		print_temp_names
+	--list|-l)		# Lists the saved template files
+		printf "\nPreparing to print the names of your saved templates\n"
+		LIST=$(get_temp_names)
+		if [[ "${LIST}" != "" ]]
+		then
+			for NAME in $LIST
+			do
+				printf "\n - ${GREEN}${UNDERLINE}${NAME}${NORMAL}\n"
+			done
+		else
+			printf "\nYou don't seem to have any templates saved.  to save one create a template folder structure and run ${YELLOW}${BOLD}~/.template-builder/builder.sh --save${NORMAL}\n"
+		fi
 		;;
 
 	--help|-h|*)
