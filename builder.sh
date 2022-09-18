@@ -1,20 +1,87 @@
 #!/bin/bash
+set -x
 
-FILE_LOC="~/.template-builder/files/"
-TEMP_LOC="~/.template-builder/.templates"
+	# Colour Variables
+
+NORMAL=$(tput sgr0)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 190)
+BLUE=$(tput setaf 153)
+RED=$(tput setaf 1)
+BOLD=$(tput bold)
+UNDERLINE=$(tput smul)
+
+FILE_LOC=~/.template-builder/files/
+TEMP_LOC=~/.template-builder/.templates
 ROOT=$(pwd)
-REC_SEP="|"
-GRP_SEP="{}"
+REC_SEP="\u001E"
+GRP_SEP="\u001D"
 TXT_SRT="\u0002"
 
-add() {		# Adds file to template directory
-	printf "\nAdd function\n"
+print_temp_names() {
+	TEMPS=""
+	while IFS= read -r LINE
+	do
+		TEMPS="${LINE##*}"
+		printf "\n${TEMPS}\n"
+	done < ${TEMP_LOC}
+	return TEMPS
 }
 
 
-save () {	# Saves the 
+add() {		# Adds file to template directory
+	printf "\nAdd function\n"
 
-	printf "\nDirectory ID - ${CUR_LOC}\n"	# DEBUGGING
+	FILE_COUNT=$(ls ${FILE_LOC} | wc -l)
+
+	cp ./${2} ${FILE_LOC}${FILE_COUNT}
+
+	mv ./${2} ./${FILE_COUNT}${2}
+
+	if [ $(echo $?) == 0 ]
+	then
+		printf "\nFile copied into the template directory\n"
+	else
+		printf "\n${RED}${BOLD}Error!${NORMAL} File not copied successfully. Error code 001\n"
+	fi
+}
+
+
+store_file() {	# Asks user if they want this file in the template.  Copies the file over to the template folder if it is wanted
+
+	printf "\nDo you want to store ${Blue}${BOLD}${FILE}${NORMAL} in the template? Y/N "
+	read RESPONSE
+
+	if [ $RESPONSE == "Y" ]	|| [ $RESPONSE == "y" ]
+	then		# Adds file to template folder and gets ID and NAME
+
+		add null $FILE
+		get_id
+
+	elif [ $RESPONSE == "N" ] || [ $RESPONSE == "n" ]
+	then		# Ignores the file and continues with the rest of the program
+
+	
+		printf "\nIgnoring ${BLUE}${BOLD}${FILE}${NORMAL}\n"
+		IGNORE=true
+
+	else		# Handles error from user not entering correct input
+
+		printf "\nPlease respond using either ${YELLOW}${BOLD}Y${NORMAL} or ${GREEN}${BOLD}N${NORMAL}\n"
+		store_file
+
+	fi
+}
+
+
+get_id() {
+	TEMP_ID=${NAME%*}	# Extrapolates ID from File Name
+
+	NAME=${NAME##*}	# Extrapolates File Name from File Name
+}
+
+
+save() {	# Saves the template structure
 
 	for FILE in *		# Runs through every file in the current directory
 	do
@@ -28,7 +95,6 @@ save () {	# Saves the
 
 				# | File name | Parent Directory ID | Dir\File | Current ID |
 			OUTPUT+="${FILE}${REC_SEP}${CUR_LOC}${REC_SEP}0${REC_SEP}${DIR_COUNT}${GRP_SEP}"
-			printf "\nDirectory - ${FILE}\n"	# DEBUGGING
 
 			CUR_LOC=$DIR_COUNT	# Sets location to the ID of this directory and updates the Directory count for the next directory to have a unique ID
 			((DIR_COUNT++))
@@ -38,20 +104,50 @@ save () {	# Saves the
 			cd ../
 
 			CUR_LOC=$PARENT		# Updates the current locoation back to this Directory so the files don't get given the wrong parent
-		else
+		else		# Handles files
+			IGNORE=false
 
 			NAME=${FILE%.*}		# Extrapolates File Name
-			printf "\nFile Name - ${NAME}\n"	# DEBUGGING
 
 			EXT=${FILE##*.}		# Extrapolates File Extension
-			printf "\nFile Extension - ${EXT}\n"	# DEBUGGING
 
-				# | File name | Parent Directory ID | Dir\File | File Type |
-			OUTPUT+="${NAME}${REC_SEP}${CUR_LOC}${REC_SEP}1${REC_SEP}${EXT}${GRP_SEP}"
-			printf "\nFile - ${FILE}\n"		# DEBUGGING
+			if [[ "${NAME}" == *""* ]]	# Checks if file name has special character in it
+			then
+
+				get_id
+			else
+
+				store_file
+			fi
+
+			if [ $IGNORE == false ]		# Checks whether the file is being ignored or not
+			then
+
+					# | File name | Parent Directory ID | Dir\File | File Type |
+				OUTPUT+="${NAME}${REC_SEP}${CUR_LOC}${REC_SEP}1${REC_SEP}${TEMP_ID}${GRP_SEP}"
+			fi
+			IGNORE=false
 		fi
 	done
 }
+
+
+name_template() {	# Requests name from the user for the template and handles empty name
+	printf "\nWhat would you like to name the template structure? "
+	read OUTPUT
+
+	if [ -z $OUTPUT ]	# Checks if user has entered anything
+	then
+
+		printf "\nPlease name the template for your convenience later on\n"
+		name_template	# Calls the question again to get a usable response
+	else
+
+		OUTPUT+="${GRP_SEP}"
+		printf "\n"	# Prints a line break to keep the next print on it's own line.  Nothing worse than leaving a script and the input line is on the end of the last bit of text
+	fi
+}
+
 
 case $1 in
 
@@ -61,34 +157,16 @@ case $1 in
 
 		printf "\nSaving the directory as a template structure\n"	# Indicates to the user that something is happening
 
-		printf "\nTemplate name: ${2}\n"	# DEBUGGING
 		if [ "${2}" != "" ]		# Tests to see if the template name exists.  If not the user is asked to enter it
 		then
 
 			OUTPUT="${2}${GRP_SEP}"
 		else
-			name_template() {	# Requests name from the user for the template and handles empty name
-				printf "\nWhat would you like to name the template structure? "
-				read OUTPUT
-
-				if [ -z $OUTPUT ]	# Checks if user has entered anything
-				then
-
-					printf "\nPlease name the template for your convenience later on\n"
-					name_template	# Calls the question again to get a usable response
-				else
-
-					OUTPUT+="${GRP_SEP}"
-					printf "\n"	# Prints a line break to keep the next print on it's own line.  Nothing worse than leaving a script and the input line is on the end of the last bit of text
-				fi
-			}
 
 			name_template	# Calls the naming function above.  It's in a function to act as a 'goto' command for if someone uses it wrong
 		fi
 
 		save
-
-		printf "\n${OUTPUT}\n"		# DEBUGGING
 
 		if [ -f $TEMP_LOC ]	# If the file exists then we add a linebreak to the start of the output.  This ensures that if we have to create a file for this then we won't have an empty line at the start of the file or no line breaks to differenciate the different templates
 		then
@@ -100,13 +178,29 @@ case $1 in
 		;;
 
 	--add|-a)	# Adds file to template files
-		if [ -z $2 ]
+
+		if [ -f $2 ]		# Checks if file exists in location specified
 		then
-			printf ""	# Temp
+			add null $2
 		else
-			printf ""	# Temp
+			printf "\nError. The file at ${BLUE}${BOLD}${2}${NORMAL} was not recognised\n"
 		fi
 
+		;;
+
+	--create|-c)
+
+		if [[ "${2}" != "" ]] && [ -f $TEMP_LOC ]
+		then
+			print_temp_names
+		else
+			printf "Error"
+		fi
+
+		;;
+
+	--list|-l)
+		print_temp_names
 		;;
 
 	--help|-h|*)
