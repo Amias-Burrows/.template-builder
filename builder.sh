@@ -18,15 +18,16 @@ GRP_SEP="\u001D"
 TXT_SRT="\u0002"
 #set -x
 
-get_temp_names() {
-	TEMPS=()
+get_temp_line() {
 	while IFS= read -r LINE		# Runs through the file contents and prints out template names
 	do
 
-		TEMPS+=(${LINE%%\\u001D*})
+		if ( $1 == ${LINE%%\\u001D*} )
+		then
+			echo "${LINE}"
+		fi
 		
 	done < ${TEMP_LOC}
-	echo "${TEMPS[@]}"
 }
 
 
@@ -159,10 +160,18 @@ case $1 in
 
 		printf "\nSaving the directory as a template structure\n"	# Indicates to the user that something is happening
 
-		if [ "${2}" != "" ]		# Tests to see if the template name exists.  If not the user is asked to enter it
+		if [ "${2}" != "" ]		# Tests to see if the template name has been entered.  If not the user is asked to enter it
 		then
+			CONFLICT=$(get_temp_line $2)
 
-			OUTPUT="${2}${GRP_SEP}"
+			if [ $CONFLICT != "" ]
+			then
+				OUTPUT="${2}${GRP_SEP}"
+			else
+				printf "\nThe name ${2} seems to be taken.  Try another one or exit with ${YELLOW}${BOLD}ctrl C${NORMAL}\n"
+				name_template
+			fi
+
 		else
 
 			name_template	# Calls the naming function above.  It's in a function to act as a 'goto' command for if someone uses it wrong
@@ -190,18 +199,11 @@ case $1 in
 
 		;;
 
-	--create|-c)
+	--create|-c)	# Uses a template folder structure that's been previously saved
 
 		if [[ "${2}" != "" ]] && [ -f $TEMP_LOC ]
 		then
-			LIST=$(get_temp_names)
-			for ENTRY in $LIST
-			do
-				if [ $2 == $ENTRY ]
-				then
-					# This is where we note down the number.  Can't be bothered to think of the varibale name so I'm gonna go get riggedy riggedy recked with Fern
-				fi
-			done
+			TEMP=$(get_temp_line $2)
 		else
 			printf "Error"
 		fi
@@ -209,14 +211,13 @@ case $1 in
 		;;
 
 	--list|-l)		# Lists the saved template files
-		printf "\nPreparing to print the names of your saved templates\n"
-		LIST=$(get_temp_names)
-		if [[ "${LIST}" != "" ]]
-		then
-			for NAME in $LIST
-			do
-				printf "\n - ${GREEN}${UNDERLINE}${NAME}${NORMAL}\n"
-			done
+		OUTPUT="\nPreparing to print the names of your saved templates\n"
+		while IFS= read -r LINE
+		do
+
+			OUTPUT+="\n - ${GREEN}${UNDERLINE}${LINE%%\\u001D*}${NORMAL}\n"
+		done < ${TEMP_LOC}
+		if [
 		else
 			printf "\nYou don't seem to have any templates saved.  to save one create a template folder structure and run ${YELLOW}${BOLD}~/.template-builder/builder.sh --save${NORMAL}\n"
 		fi
