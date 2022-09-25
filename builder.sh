@@ -216,14 +216,21 @@ case $1 in
 		do
 
 			OUTPUT+="\n - ${GREEN}${UNDERLINE}${LINE%%\\u001D*}${NORMAL}\n"
+			EXISTS=true
 		done < ${TEMP_LOC}
-		if [
+		if [ $EXISTS = true ]
+		then
+			printf "${OUTPUT}"
 		else
 			printf "\nYou don't seem to have any templates saved.  to save one create a template folder structure and run ${YELLOW}${BOLD}~/.template-builder/builder.sh --save${NORMAL}\n"
 		fi
 		;;
 
 	--help|-h|*)
-		printf "\nHelp Page\n"
+		printf "\n${GREEN}${UNDERLINE}--help${NORMAL} / ${GREEN}${UNDERLINE}-h${NORMAL}\n${YELLOW}Pulls up the list of commands you can use with this program${NORMAL}\n"
+		printf "\n${GREEN}${UNDERLINE}--list${NORMAL} / ${GREEN}${UNDERLINE}-l${NORMAL}\n${YELLOW}Lists the templates you've saved so far${NORMAL}"
+		printf "\n${GREEN}${UNDERLINE}--save${NORMAL} / ${GREEN}${UNDERLINE}-s${NORMAL}${BLUE} [template name]\n${YELLOW}Saves the current durectory as a template.${NORMAL}\n"
+		printf "\n${GREEN}${UNDERLINE}--create${NORMAL} / ${GREEN}${UNDERLINE}-c${NORMAL}${BLUE} [template name]\n${YELLOW}Creates a project from a saved template.${NORMAL}\n"
+		printf "\n${GREEN}${UNDERLINE}--add${NORMAL} / ${GREEN}${UNDERLINE}-a${NORMAL}${BLUE} [file name]\n${YELLOW}Adds a new file to be referred to in templates.${NORMAL}\n"
 		;;
 esac
